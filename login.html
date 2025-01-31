@@ -109,9 +109,9 @@
         serverURL: "https://i787kjtv.lc-cn-n1-shared.com"
     });
 
-    // 在 script 标签中添加默认账号设置
-    const DEFAULT_USERNAME = 'xueying';
-    const DEFAULT_PASSWORD = '8888';
+    // 在 script 标签中修改默认账号设置
+    const DEFAULT_USERNAME = '777';
+    const DEFAULT_PASSWORD = '777';
 
     // 页面加载完成后自动填充默认账号
     document.addEventListener('DOMContentLoaded', () => {
@@ -153,8 +153,9 @@
         const password = document.getElementById('password').value;
         const errorMessage = document.getElementById('error-message');
 
-        // 只允许默认账号登录
-        if (username === DEFAULT_USERNAME && password === DEFAULT_PASSWORD) {
+        // 允许两个账号登录
+        if ((username === 'xueying' && password === '8888') || 
+            (username === '777' && password === '777')) {
             try {
                 // 登录用户
                 const user = await AV.User.logIn(username, password);
@@ -165,8 +166,8 @@
                 // 如果登录失败（可能是第一次登录），尝试创建用户
                 try {
                     const user = new AV.User();
-                    user.setUsername(DEFAULT_USERNAME);
-                    user.setPassword(DEFAULT_PASSWORD);
+                    user.setUsername(username);
+                    user.setPassword(password);
                     await user.signUp();
                     console.log('用户创建成功');
                     window.location.href = 'document-list.html';
