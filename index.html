@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>会议文档助手</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.0/mammoth.browser.min.js"></script>
+    <!-- 添加 Material Icons 字体 -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://unpkg.com/docx@7.1.0/build/index.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- 左半屏 -->
+        <div class="left-half">
+            <!-- 侧边栏 -->
+            <div class="sidebar">
+                <div class="sidebar-header">
+                    <button id="import-btn" class="primary-btn">
+                        <span class="material-icons">upload_file</span>
+                        <span class="btn-text">导入文件</span>
+                    </button>
+                    <button id="new-text-btn" class="primary-btn">
+                        <span class="material-icons">note_add</span>
+                        <span class="btn-text">新建文本</span>
+                    </button>
+                    <button id="keywords-btn" class="primary-btn">
+                        <span class="material-icons">label</span>
+                        <span class="btn-text">关键词管理</span>
+                    </button>
+                    <input type="file" id="file-input" accept=".doc,.docx,.pdf,.txt" multiple style="display: none;">
+                </div>
+                <div class="file-list" id="file-tree"></div>
+                <select id="encoding-select" class="encoding-select">
+                    <option value="utf-8">UTF-8</option>
+                    <option value="gbk">GBK</option>
+                    <option value="gb2312">GB2312</option>
+                    <option value="big5">Big5</option>
+                </select>
+            </div>
+
+            <!-- 历史会议记录区域 -->
+            <div class="source-panel">
+                <div class="source-header">
+                    <div class="current-file-info">
+                        <span id="current-file-name"></span>
+                    </div>
+                    <div class="source-tools">
+                        <button id="mark-as-read" class="tool-btn unread">
+                            <span class="material-icons">radio_button_unchecked</span>
+                            <span class="btn-text">标记为已读</span>
+                        </button>
+                    </div>
+                </div>
+                <div id="source-content" class="source-content"></div>
+                <div class="keyword-panel">
+                    <div class="keyword-panel-header">
+                        <h3>关键词统计</h3>
+                        <span class="keyword-count">共找到 <span id="keyword-matches">0</span> 处匹配</span>
+                    </div>
+                    <div id="keywords-container" class="keywords-container">
+                        <!-- 关键词统计将在这里动态生成 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右半屏：写作区域 -->
+        <div class="editor-panel">
+            <div class="panel-header">
+                <div class="header-left">
+                    <button id="back-btn" class="icon-btn">
+                        <span class="material-icons">arrow_back</span>
+                    </button>
+                    <div class="title-container">
+                        <h2 id="doc-title" contenteditable="true" spellcheck="false"></h2>
+                        <div class="edit-hint">点击编辑标题</div>
+                    </div>
+                </div>
+                <div class="editor-controls">
+                    <button id="save-btn" class="primary-btn">
+                        <span class="material-icons">save</span>
+                        保存
+                    </button>
+                    <div class="dropdown">
+                        <button id="download-btn" class="primary-btn">
+                            <span class="material-icons">download</span>
+                            下载
+                        </button>
+                        <div class="dropdown-content">
+                            <button class="dropdown-item" data-format="docx">
+                                <span class="material-icons">description</span>
+                                Word文档 (.docx)
+                            </button>
+                            <button class="dropdown-item" data-format="txt">
+                                <span class="material-icons">text_snippet</span>
+                                文本文件 (.txt)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="editor" class="editor-content" contenteditable="true"></div>
+        </div>
+    </div>
+
+    <!-- 在 body 末尾添加对话框 -->
+    <div id="text-input-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>新建文本文件</h3>
+                <button class="close-btn">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="text-file-name">文件名称</label>
+                    <input type="text" id="text-file-name" placeholder="请输入文件名称">
+                </div>
+                <div class="form-group">
+                    <label for="text-content">文件内容</label>
+                    <textarea id="text-content" rows="10" placeholder="请输入文件内容"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancel-text-btn" class="secondary-btn">取消</button>
+                <button id="save-text-btn" class="primary-btn">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加关键词管理对话框 -->
+    <div id="keywords-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>关键词管理</h3>
+                <button class="close-btn">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>添加关键词</label>
+                    <div class="keyword-input-group">
+                        <input type="text" id="keyword-input" placeholder="输入关键词后按回车添加">
+                        <button id="add-keyword-btn" class="primary-btn">
+                            <span class="material-icons">add</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="keywords-list">
+                    <!-- 关键词列表将在这里动态生成 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html> 
