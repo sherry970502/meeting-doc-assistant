@@ -318,41 +318,46 @@ class DocumentAssistant {
         }
     }
 
-    displayDocument(doc) {
+    async displayDocument(doc) {
         const container = document.getElementById('source-content');
         if (!container) return;
 
         const fileType = doc.originalFile.name.toLowerCase().split('.').pop();
         const fileTypeInfo = this.getFileTypeInfo(fileType);
 
-        // 获取当前会议文档的关键词
-        const documents = new Map(JSON.parse(localStorage.getItem('documents') || '[]'));
-        const docInfo = documents.get(this.docId);
-        const keywords = docInfo?.keywords || [];
+        try {
+            // 从 LeanCloud 获取当前文档的关键词
+            const query = new AV.Query('Document');
+            const currentDoc = await query.get(this.docId);
+            const keywords = currentDoc.get('keywords') || [];
 
-        let content = doc.content;
-        const keywordMatches = new Map();
+            let content = doc.content;
+            const keywordMatches = new Map();
 
-        // 使用会议文档的关键词进行高亮和统计
-        keywords.forEach(keyword => {
-            const regex = new RegExp(keyword, 'gi');
-            let matches = content.match(regex);
-            keywordMatches.set(keyword, matches ? matches.length : 0);
-            content = content.replace(regex, `<span class="keyword-highlight">$&</span>`);
-        });
+            // 使用关键词进行高亮和统计
+            keywords.forEach(keyword => {
+                const regex = new RegExp(keyword, 'gi');
+                let matches = content.match(regex);
+                keywordMatches.set(keyword, matches ? matches.length : 0);
+                content = content.replace(regex, `<span class="keyword-highlight">$&</span>`);
+            });
 
-        // 显示文档内容
-        container.innerHTML = `
-            <div class="document-header">
-                <span class="file-type-badge">${fileTypeInfo}</span>
-            </div>
-            <div class="document-content">
-                <pre style="white-space: pre-wrap; word-wrap: break-word; font-family: inherit;">${content}</pre>
-            </div>
-        `;
+            // 显示文档内容
+            container.innerHTML = `
+                <div class="document-header">
+                    <span class="file-type-badge">${fileTypeInfo}</span>
+                </div>
+                <div class="document-content">
+                    <pre style="white-space: pre-wrap; word-wrap: break-word; font-family: inherit;">${content}</pre>
+                </div>
+            `;
 
-        // 更新关键词统计
-        this.updateKeywordStats(keywordMatches);
+            // 更新关键词统计
+            this.updateKeywordStats(keywordMatches);
+        } catch (error) {
+            console.error('显示文档失败:', error);
+            alert('显示文档失败，请重试');
+        }
     }
 
     getFileTypeInfo(fileType) {
@@ -443,64 +448,70 @@ class DocumentAssistant {
         }
     }
 
-    loadDocumentInfo() {
-        if (!this.docId) {
-            window.location.href = 'document-list.html';
-            return;
-        }
-        
-        const documents = new Map(JSON.parse(localStorage.getItem('documents') || '[]'));
-        const docInfo = documents.get(this.docId);
-        
-        if (docInfo) {
-            // 更新文档标题
-            const titleElement = document.getElementById('doc-title');
-            if (titleElement) {
-                titleElement.textContent = docInfo.title;
+    async loadDocumentInfo() {
+        try {
+            if (!this.docId) {
+                window.location.href = 'document-list.html';
+                return;
             }
 
-            // 加载编辑器内容
-            const editor = document.getElementById('editor');
-            if (editor && docInfo.content) {
-                editor.innerHTML = docInfo.content;
-            }
+            // 从 LeanCloud 获取文档信息
+            const query = new AV.Query('Document');
+            const doc = await query.get(this.docId);
+            
+            if (doc) {
+                // 更新文档标题
+                const titleElement = document.getElementById('doc-title');
+                if (titleElement) {
+                    titleElement.textContent = doc.get('title');
+                }
 
-            // 加载相关文件
-            if (docInfo.relatedFiles) {
-                this.documents.clear();
-                this.readFiles.clear();
+                // 加载编辑器内容
+                const editor = document.getElementById('editor');
+                if (editor && doc.get('content')) {
+                    editor.innerHTML = doc.get('content');
+                }
 
-                docInfo.relatedFiles.forEach(file => {
-                    this.documents.set(file.name, {
-                        content: file.content,
-                        highlights: [],
-                        annotations: [],
-                        keywords: new Set(file.keywords || []),
-                        originalFile: file.originalFile ? new File(
-                            [new Blob([file.content])],
-                            file.originalFile.name,
-                            {
-                                type: file.originalFile.type,
-                                lastModified: file.originalFile.lastModified
-                            }
-                        ) : null
+                // 加载相关文件
+                if (doc.get('files')) {
+                    this.documents.clear();
+                    this.readFiles.clear();
+
+                    doc.get('files').forEach(file => {
+                        this.documents.set(file.name, {
+                            content: file.content,
+                            highlights: [],
+                            annotations: [],
+                            keywords: new Set(file.keywords || []),
+                            originalFile: file.originalFile ? new File(
+                                [new Blob([file.content])],
+                                file.originalFile.name,
+                                {
+                                    type: file.originalFile.type,
+                                    lastModified: file.originalFile.lastModified
+                                }
+                            ) : null
+                        });
+
+                        if (file.isRead) {
+                            this.readFiles.add(file.name);
+                        }
                     });
 
-                    if (file.isRead) {
-                        this.readFiles.add(file.name);
+                    this.updateFileList();
+                    
+                    // 如果有文件，显示第一个文件
+                    const firstFileName = Array.from(this.documents.keys())[0];
+                    if (firstFileName) {
+                        this.switchDocument(firstFileName);
                     }
-                });
-
-                this.updateFileList();
-                
-                // 如果有文件，显示第一个文件
-                const firstFileName = Array.from(this.documents.keys())[0];
-                if (firstFileName) {
-                    this.switchDocument(firstFileName);
                 }
+            } else {
+                window.location.href = 'document-list.html';
             }
-        } else {
-            window.location.href = 'document-list.html';
+        } catch (error) {
+            console.error('加载文档失败:', error);
+            alert('加载文档失败，请重试');
         }
     }
 
@@ -561,40 +572,50 @@ class DocumentAssistant {
         }, 2000);
     }
 
-    saveDocumentContent(isFileImport = false) {
-        if (!this.docId) return;
+    async saveDocumentContent(isFileImport = false) {
+        try {
+            if (!this.docId) return;
 
-        const editor = document.getElementById('editor');
-        if (!editor) return;
-
-        const documents = new Map(JSON.parse(localStorage.getItem('documents') || '[]'));
-        const docInfo = documents.get(this.docId);
-        
-        if (docInfo) {
-            // 保存编辑器内容
-            docInfo.content = editor.innerHTML;
-            docInfo.updatedAt = new Date().toISOString();
-
-            // 保存相关文件，包括文件内容和原始文件对象
-            docInfo.relatedFiles = Array.from(this.documents.entries()).map(([name, doc]) => ({
-                name,
-                content: doc.content,
-                isRead: this.readFiles.has(name),
-                keywords: Array.from(doc.keywords),
-                originalFile: doc.originalFile ? {
-                    name: doc.originalFile.name,
-                    type: doc.originalFile.type,
-                    lastModified: doc.originalFile.lastModified
-                } : null
-            }));
-
-            documents.set(this.docId, docInfo);
-            localStorage.setItem('documents', JSON.stringify([...documents]));
+            // 获取文档对象
+            const query = new AV.Query('Document');
+            const doc = await query.get(this.docId);
             
-            // 只在非文件导入时显示保存提示
-            if (!isFileImport) {
-                this.showToast('已自动保存');
+            if (doc) {
+                // 保存编辑器内容
+                const editor = document.getElementById('editor');
+                if (editor) {
+                    doc.set('content', editor.innerHTML);
+                }
+
+                // 保存相关文件
+                if (this.documents && this.documents.size > 0) {
+                    const files = Array.from(this.documents.entries()).map(([name, fileDoc]) => ({
+                        name,
+                        content: fileDoc.content,
+                        isRead: this.readFiles.has(name),
+                        keywords: Array.from(fileDoc.keywords || new Set()),
+                        originalFile: fileDoc.originalFile ? {
+                            name: fileDoc.originalFile.name,
+                            type: fileDoc.originalFile.type,
+                            lastModified: fileDoc.originalFile.lastModified
+                        } : null
+                    }));
+
+                    doc.set('files', files);
+                } else {
+                    // 如果没有文件，设置为空数组
+                    doc.set('files', []);
+                }
+
+                await doc.save();
+
+                if (!isFileImport) {
+                    this.showToast('已自动保存');
+                }
             }
+        } catch (error) {
+            console.error('保存文档失败:', error);
+            alert('保存失败，请重试');
         }
     }
 
@@ -796,28 +817,36 @@ class DocumentAssistant {
             if (e.target === modal) closeModal();
         });
 
-        const addKeyword = () => {
+        const addKeyword = async () => {
             const keyword = keywordInput.value.trim();
             if (keyword) {
-                // 获取当前文档信息
-                const documents = new Map(JSON.parse(localStorage.getItem('documents') || '[]'));
-                const docInfo = documents.get(this.docId);
-                
-                if (docInfo) {
-                    // 确保 keywords 数组存在
-                    docInfo.keywords = docInfo.keywords || [];
-                    if (!docInfo.keywords.includes(keyword)) {
-                        docInfo.keywords.push(keyword);
-                        documents.set(this.docId, docInfo);
-                        localStorage.setItem('documents', JSON.stringify([...documents]));
+                try {
+                    // 从 LeanCloud 获取文档
+                    const query = new AV.Query('Document');
+                    const doc = await query.get(this.docId);
+                    
+                    if (doc) {
+                        // 获取现有关键词
+                        const keywords = doc.get('keywords') || [];
                         
-                        this.renderKeywordsList();
-                        keywordInput.value = '';
-                        // 重新显示当前文档以更新高亮
-                        if (this.currentDoc) {
-                            this.displayDocument(this.currentDoc);
+                        // 如果关键词不存在，则添加
+                        if (!keywords.includes(keyword)) {
+                            keywords.push(keyword);
+                            doc.set('keywords', keywords);
+                            await doc.save();
+                            
+                            this.renderKeywordsList();
+                            keywordInput.value = '';
+                            
+                            // 重新显示当前文档以更新高亮
+                            if (this.currentDoc) {
+                                this.displayDocument(this.currentDoc);
+                            }
                         }
                     }
+                } catch (error) {
+                    console.error('添加关键词失败:', error);
+                    alert('添加关键词失败，请重试');
                 }
             }
         };
@@ -833,43 +862,57 @@ class DocumentAssistant {
     }
 
     // 修改关键词列表渲染
-    renderKeywordsList() {
+    async renderKeywordsList() {
         const container = document.querySelector('.keywords-list');
         if (!container) return;
 
-        const documents = new Map(JSON.parse(localStorage.getItem('documents') || '[]'));
-        const docInfo = documents.get(this.docId);
-        const keywords = docInfo?.keywords || [];
-
-        container.innerHTML = keywords.map(keyword => `
-            <div class="keyword-item">
-                <span>${keyword}</span>
-                <button class="remove-btn" data-keyword="${keyword}">
-                    <span class="material-icons" style="font-size: 14px;">close</span>
-                </button>
-            </div>
-        `).join('');
-
-        // 添加删除事件
-        container.querySelectorAll('.remove-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const keyword = btn.dataset.keyword;
-                const documents = new Map(JSON.parse(localStorage.getItem('documents') || '[]'));
-                const docInfo = documents.get(this.docId);
+        try {
+            // 从 LeanCloud 获取文档
+            const query = new AV.Query('Document');
+            const doc = await query.get(this.docId);
+            
+            if (doc) {
+                const keywords = doc.get('keywords') || [];
                 
-                if (docInfo && docInfo.keywords) {
-                    docInfo.keywords = docInfo.keywords.filter(k => k !== keyword);
-                    documents.set(this.docId, docInfo);
-                    localStorage.setItem('documents', JSON.stringify([...documents]));
-                    
-                    this.renderKeywordsList();
-                    // 重新显示文档以更新高亮
-                    if (this.currentDoc) {
-                        this.displayDocument(this.currentDoc);
-                    }
-                }
-            });
-        });
+                container.innerHTML = keywords.map(keyword => `
+                    <div class="keyword-item">
+                        <span>${keyword}</span>
+                        <button class="remove-btn" data-keyword="${keyword}">
+                            <span class="material-icons" style="font-size: 14px;">close</span>
+                        </button>
+                    </div>
+                `).join('');
+
+                // 添加删除事件
+                container.querySelectorAll('.remove-btn').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const keyword = btn.dataset.keyword;
+                        try {
+                            // 更新 LeanCloud 文档
+                            const doc = await query.get(this.docId);
+                            const keywords = doc.get('keywords') || [];
+                            const updatedKeywords = keywords.filter(k => k !== keyword);
+                            
+                            doc.set('keywords', updatedKeywords);
+                            await doc.save();
+                            
+                            this.renderKeywordsList();
+                            
+                            // 重新显示文档以更新高亮
+                            if (this.currentDoc) {
+                                this.displayDocument(this.currentDoc);
+                            }
+                        } catch (error) {
+                            console.error('删除关键词失败:', error);
+                            alert('删除关键词失败，请重试');
+                        }
+                    });
+                });
+            }
+        } catch (error) {
+            console.error('加载关键词失败:', error);
+            alert('加载关键词失败，请重试');
+        }
     }
 
     // 更新关键词统计
