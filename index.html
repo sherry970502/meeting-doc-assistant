@@ -10,6 +10,7 @@
     <!-- 添加 Material Icons 字体 -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <script src="https://unpkg.com/docx@7.1.0/build/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leancloud-storage@4.15.0/dist/av-min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -158,6 +159,15 @@
         </div>
     </div>
 
+    <!-- 在 app.js 之前初始化 LeanCloud -->
+    <script>
+    // 初始化 LeanCloud
+    AV.init({
+        appId: "I787kjtvNX6yrGVhtJLvzt0S-gzGzoHsz",
+        appKey: "borhhyA3jgbBVyv6j2cBQdcM",
+        serverURL: "https://i787kjtv.lc-cn-n1-shared.com"
+    });
+    </script>
     <script src="app.js"></script>
 </body>
 </html> 

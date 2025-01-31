@@ -6,21 +6,36 @@
     <title>文档管理</title>
     <link rel="stylesheet" href="document-list.css">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/leancloud-storage@4.15.0/dist/av-min.js"></script>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>文档管理</h1>
-            <button id="create-doc" class="create-btn">
-                <span class="material-icons">add</span>
-                新建思考文档
-            </button>
+            <div class="header-actions">
+                <button id="create-doc" class="create-btn" type="button">
+                    <span class="material-icons">add</span>
+                    新建思考文档
+                </button>
+                <button id="logout-btn" class="secondary-btn" type="button">
+                    <span class="material-icons">logout</span>
+                    退出登录
+                </button>
+            </div>
         </div>
         
         <div class="document-list">
             <!-- 文档列表将在这里动态生成 -->
         </div>
     </div>
+    <script>
+    // 初始化 LeanCloud
+    AV.init({
+        appId: "I787kjtvNX6yrGVhtJLvzt0S-gzGzoHsz",
+        appKey: "borhhyA3jgbBVyv6j2cBQdcM",
+        serverURL: "https://i787kjtv.lc-cn-n1-shared.com"
+    });
+    </script>
     <script src="document-list.js"></script>
 </body>
 </html> 

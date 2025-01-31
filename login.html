@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 - 会议文档助手</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/leancloud-storage@4.15.0/dist/av-min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .login-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .form-group label {
+            font-weight: 500;
+            color: #333;
+        }
+        .form-group input {
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        .login-btn {
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            padding: 0.75rem;
+            border-radius: 4px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .login-btn:hover {
+            background-color: #1557b0;
+        }
+        .register-link {
+            text-align: center;
+            margin-top: 1rem;
+        }
+        .register-link a {
+            color: #1a73e8;
+            text-decoration: none;
+        }
+        .error-message {
+            color: #d93025;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>会议文档助手</h1>
+            <p>请登录您的账号</p>
+        </div>
+        <form class="login-form" id="login-form">
+            <div class="form-group">
+                <label for="username">用户名</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">密码</label>
+                <input type="password" id="password" name="password" required>
+                <div class="error-message" id="error-message"></div>
+            </div>
+            <button type="submit" class="login-btn">登录</button>
+            <div class="register-link">
+                <a href="#" id="register-link">没有账号？立即注册</a>
+            </div>
+        </form>
+    </div>
+
+    <script>
+    // 初始化 LeanCloud
+    AV.init({
+        appId: "I787kjtvNX6yrGVhtJLvzt0S-gzGzoHsz",
+        appKey: "borhhyA3jgbBVyv6j2cBQdcM",
+        serverURL: "https://i787kjtv.lc-cn-n1-shared.com"
+    });
+
+    // 在 script 标签中添加默认账号设置
+    const DEFAULT_USERNAME = 'xueying';
+    const DEFAULT_PASSWORD = '8888';
+
+    // 页面加载完成后自动填充默认账号
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('username').value = DEFAULT_USERNAME;
+        document.getElementById('password').value = DEFAULT_PASSWORD;
+
+        // 检查是否已经有这个用户，如果没有就创建
+        checkAndCreateDefaultUser();
+    });
+
+    // 添加检查和创建默认用户的函数
+    async function checkAndCreateDefaultUser() {
+        try {
+            // 尝试使用默认账号登录
+            const user = await AV.User.logIn(DEFAULT_USERNAME, DEFAULT_PASSWORD);
+            console.log('默认用户已存在');
+            // 退出登录，等待用户手动登录
+            await AV.User.logOut();
+        } catch (error) {
+            // 如果登录失败，创建默认用户
+            try {
+                const user = new AV.User();
+                user.setUsername(DEFAULT_USERNAME);
+                user.setPassword(DEFAULT_PASSWORD);
+                await user.signUp();
+                console.log('默认用户创建成功');
+                // 创建后退出登录，等待用户手动登录
+                await AV.User.logOut();
+            } catch (signUpError) {
+                console.error('创建默认用户失败:', signUpError);
+            }
+        }
+    }
+
+    // 处理登录表单提交
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        const errorMessage = document.getElementById('error-message');
+
+        // 只允许默认账号登录
+        if (username === DEFAULT_USERNAME && password === DEFAULT_PASSWORD) {
+            try {
+                // 登录用户
+                const user = await AV.User.logIn(username, password);
+                console.log('登录成功:', user);
+                // 跳转到文档列表页面
+                window.location.href = 'document-list.html';
+            } catch (error) {
+                // 如果登录失败（可能是第一次登录），尝试创建用户
+                try {
+                    const user = new AV.User();
+                    user.setUsername(DEFAULT_USERNAME);
+                    user.setPassword(DEFAULT_PASSWORD);
+                    await user.signUp();
+                    console.log('用户创建成功');
+                    window.location.href = 'document-list.html';
+                } catch (signUpError) {
+                    console.error('系统错误:', signUpError);
+                    errorMessage.textContent = '系统错误，请稍后重试';
+                    errorMessage.style.display = 'block';
+                }
+            }
+        } else {
+            errorMessage.textContent = '用户名或密码错误';
+            errorMessage.style.display = 'block';
+        }
+    });
+
+    // 移除注册链接的点击事件
+    document.getElementById('register-link').style.display = 'none';
+    </script>
+</body>
+</html> 
