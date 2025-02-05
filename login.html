@@ -116,9 +116,10 @@
         const password = document.getElementById('password').value;
         const errorMessage = document.getElementById('error-message');
 
-        // 允许两个账号登录
+        // 允许三个账号登录
         if ((username === 'xueying' && password === '8888') || 
-            (username === '777' && password === '777')) {
+            (username === '777' && password === '777') ||
+            (username === 'lyd' && password === '0502')) {
             try {
                 // 登录用户
                 const user = await AV.User.logIn(username, password);
