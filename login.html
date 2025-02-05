@@ -109,43 +109,6 @@
         serverURL: "https://i787kjtv.lc-cn-n1-shared.com"
     });
 
-    // 在 script 标签中修改默认账号设置
-    const DEFAULT_USERNAME = '777';
-    const DEFAULT_PASSWORD = '777';
-
-    // 页面加载完成后自动填充默认账号
-    document.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('username').value = DEFAULT_USERNAME;
-        document.getElementById('password').value = DEFAULT_PASSWORD;
-
-        // 检查是否已经有这个用户，如果没有就创建
-        checkAndCreateDefaultUser();
-    });
-
-    // 添加检查和创建默认用户的函数
-    async function checkAndCreateDefaultUser() {
-        try {
-            // 尝试使用默认账号登录
-            const user = await AV.User.logIn(DEFAULT_USERNAME, DEFAULT_PASSWORD);
-            console.log('默认用户已存在');
-            // 退出登录，等待用户手动登录
-            await AV.User.logOut();
-        } catch (error) {
-            // 如果登录失败，创建默认用户
-            try {
-                const user = new AV.User();
-                user.setUsername(DEFAULT_USERNAME);
-                user.setPassword(DEFAULT_PASSWORD);
-                await user.signUp();
-                console.log('默认用户创建成功');
-                // 创建后退出登录，等待用户手动登录
-                await AV.User.logOut();
-            } catch (signUpError) {
-                console.error('创建默认用户失败:', signUpError);
-            }
-        }
-    }
-
     // 处理登录表单提交
     document.getElementById('login-form').addEventListener('submit', async (e) => {
         e.preventDefault();
