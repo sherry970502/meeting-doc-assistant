@@ -140,7 +140,7 @@ class DocumentManager {
         container.innerHTML = documents.map(doc => `
             <div class="document-card" data-id="${doc.id}">
                 <div class="document-info">
-                    <h3>${doc.get('title') || '未命名文档'}</h3>
+                    <h3 class="doc-title" contenteditable="true" data-id="${doc.id}">${doc.get('title') || '未命名文档'}</h3>
                     <div class="document-meta">
                         <span>创建时间：${doc.createdAt.toLocaleString()}</span>
                         <span>更新时间：${doc.updatedAt.toLocaleString()}</span>
@@ -182,6 +182,35 @@ class DocumentManager {
                         console.error('删除文档失败:', error);
                         alert('删除文档失败，请重试');
                     }
+                }
+            });
+        });
+
+        // 添加标题编辑功能
+        document.querySelectorAll('.doc-title').forEach(titleElement => {
+            // 失去焦点时保存
+            titleElement.addEventListener('blur', async (e) => {
+                const docId = e.target.dataset.id;
+                const newTitle = e.target.textContent.trim();
+                
+                try {
+                    const doc = AV.Object.createWithoutData('Document', docId);
+                    doc.set('title', newTitle);
+                    await doc.save();
+                    console.log('标题更新成功');
+                } catch (error) {
+                    console.error('更新标题失败:', error);
+                    alert('更新标题失败，请重试');
+                    // 恢复原标题
+                    await this.loadDocuments();
+                }
+            });
+
+            // 按下回车键时保存
+            titleElement.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.target.blur();
                 }
             });
         });
