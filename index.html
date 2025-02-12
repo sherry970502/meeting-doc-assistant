@@ -53,6 +53,10 @@
                             <span class="material-icons">radio_button_unchecked</span>
                             <span class="btn-text">标记为已读</span>
                         </button>
+                        <button id="show-notes" class="tool-btn">
+                            <span class="material-icons">note</span>
+                            <span class="btn-text">查看笔记</span>
+                        </button>
                     </div>
                 </div>
                 <div id="source-content" class="source-content"></div>
@@ -154,6 +158,23 @@
                 </div>
                 <div class="keywords-list">
                     <!-- 关键词列表将在这里动态生成 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 在 body 末尾添加笔记展示面板 -->
+    <div id="notes-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>重要内容笔记</h3>
+                <button class="close-btn">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="notes-list">
+                    <!-- 笔记列表将在这里动态生成 -->
                 </div>
             </div>
         </div>

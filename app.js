@@ -5,6 +5,7 @@ class DocumentAssistant {
         this.currentDoc = null;
         this.currentEncoding = 'utf-8';
         this.readFiles = new Set(); // 存储已读文件的ID
+        this.highlights = new Map(); // 存储每个文档的高亮内容
         
         // 确保按正确的顺序初始化
         this.loadReadStatus();
@@ -22,6 +23,8 @@ class DocumentAssistant {
         this.setupAutoSave();
         this.initializeDownloadHandlers();
         this.initializeEditor();
+        this.initializeHighlightFeature();
+        this.initializeNotesModal();
     }
 
     // 初始化 PDF.js
@@ -342,6 +345,15 @@ class DocumentAssistant {
                 content = content.replace(regex, `<span class="keyword-highlight">$&</span>`);
             });
 
+            // 添加高亮显示
+            const fileName = document.getElementById('current-file-name').textContent;
+            const highlights = this.highlights.get(fileName) || [];
+            
+            highlights.forEach(highlight => {
+                const regex = new RegExp(highlight.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+                content = content.replace(regex, `<span class="highlight-text">$&</span>`);
+            });
+
             // 显示文档内容
             container.innerHTML = `
                 <div class="document-header">
@@ -470,6 +482,12 @@ class DocumentAssistant {
                 const editor = document.getElementById('editor');
                 if (editor && doc.get('content')) {
                     editor.innerHTML = doc.get('content');
+                }
+
+                // 加载高亮内容
+                const savedHighlights = doc.get('highlights');
+                if (savedHighlights) {
+                    this.highlights = new Map(savedHighlights);
                 }
 
                 // 加载相关文件
@@ -1263,6 +1281,146 @@ class DocumentAssistant {
         }
         
         return lastNumber;
+    }
+
+    initializeHighlightFeature() {
+        // 添加选择文本高亮功能
+        document.getElementById('source-content').addEventListener('mouseup', (e) => {
+            const selection = window.getSelection();
+            const selectedText = selection.toString().trim();
+
+            if (selectedText) {
+                // 创建高亮工具栏
+                this.showHighlightToolbar(e.clientX, e.clientY, selectedText);
+            }
+        });
+    }
+
+    showHighlightToolbar(x, y, selectedText) {
+        // 移除现有的工具栏
+        const existingToolbar = document.querySelector('.highlight-toolbar');
+        if (existingToolbar) {
+            existingToolbar.remove();
+        }
+
+        // 创建新的工具栏
+        const toolbar = document.createElement('div');
+        toolbar.className = 'highlight-toolbar';
+        toolbar.innerHTML = `
+            <button class="highlight-btn">
+                <span class="material-icons">highlight</span>
+                高亮
+            </button>
+        `;
+
+        // 定位工具栏
+        toolbar.style.position = 'fixed';
+        toolbar.style.left = `${x}px`;
+        toolbar.style.top = `${y - 40}px`;
+
+        // 添加高亮点击事件
+        toolbar.querySelector('.highlight-btn').addEventListener('click', () => {
+            this.addHighlight(selectedText);
+            toolbar.remove();
+        });
+
+        document.body.appendChild(toolbar);
+
+        // 点击其他地方时移除工具栏
+        document.addEventListener('mousedown', (e) => {
+            if (!toolbar.contains(e.target)) {
+                toolbar.remove();
+            }
+        }, { once: true });
+    }
+
+    addHighlight(text) {
+        const currentFileName = document.getElementById('current-file-name').textContent;
+        if (!this.highlights.has(currentFileName)) {
+            this.highlights.set(currentFileName, []);
+        }
+
+        this.highlights.get(currentFileName).push({
+            text,
+            timestamp: new Date().toISOString()
+        });
+
+        // 更新显示
+        this.displayDocument(this.currentDoc);
+        
+        // 保存到 LeanCloud
+        this.saveHighlights();
+    }
+
+    async saveHighlights() {
+        try {
+            if (!this.docId) return;
+            
+            // 获取当前文档
+            const query = new AV.Query('Document');
+            const doc = await query.get(this.docId);
+            
+            if (doc) {
+                // 保存高亮内容
+                doc.set('highlights', Array.from(this.highlights.entries()));
+                await doc.save();
+                console.log('高亮内容保存成功');
+            }
+        } catch (error) {
+            console.error('保存高亮失败:', error);
+            this.showToast('保存高亮失败，请重试');
+        }
+    }
+
+    initializeNotesModal() {
+        const modal = document.getElementById('notes-modal');
+        const showNotesBtn = document.getElementById('show-notes');
+        const closeBtn = modal.querySelector('.close-btn');
+
+        showNotesBtn.addEventListener('click', () => {
+            this.showNotes();
+            modal.classList.add('show');
+        });
+
+        closeBtn.addEventListener('click', () => {
+            modal.classList.remove('show');
+        });
+
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('show');
+            }
+        });
+    }
+
+    showNotes() {
+        const notesList = document.getElementById('notes-list');
+        let allNotes = [];
+
+        // 收集所有文档的高亮内容
+        this.highlights.forEach((highlights, fileName) => {
+            highlights.forEach(highlight => {
+                allNotes.push({
+                    text: highlight.text,
+                    fileName,
+                    timestamp: highlight.timestamp
+                });
+            });
+        });
+
+        // 按时间排序
+        allNotes.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        // 渲染笔记列表
+        notesList.innerHTML = allNotes.map(note => `
+            <div class="note-item">
+                <div class="note-content">${note.text}</div>
+                <div class="note-source">
+                    <span class="material-icons">description</span>
+                    <span>来自：${note.fileName}</span>
+                </div>
+            </div>
+        `).join('');
     }
 }
 
