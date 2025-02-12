@@ -835,7 +835,7 @@ body {
     opacity: 0.7;
 }
 
-/* 对话框样式 */
+/* 修改弹窗样式 */
 .modal {
     display: none;
     position: fixed;
@@ -847,11 +847,14 @@ body {
     z-index: 1000;
     opacity: 0;
     transition: opacity 0.3s;
+    overflow-y: auto; /* 添加垂直滚动 */
 }
 
 .modal.show {
-    display: flex !important; /* 使用 !important 确保显示 */
+    display: flex !important;
     opacity: 1;
+    align-items: flex-start; /* 改为顶部对齐 */
+    padding: 20px 0; /* 添加上下内边距 */
 }
 
 .modal-content {
@@ -859,13 +862,9 @@ body {
     border-radius: 8px;
     width: 90%;
     max-width: 600px;
-    margin: auto;
+    margin: 20px auto; /* 修改外边距 */
     transform: translateY(-20px);
     transition: transform 0.3s;
-}
-
-.modal.show .modal-content {
-    transform: translateY(0);
 }
 
 .modal-header {
@@ -1076,4 +1075,29 @@ body {
 
 .note-source .material-icons {
     font-size: 14px;
+}
+
+/* 笔记列表样式 */
+#notes-list {
+    max-height: 60vh; /* 限制最大高度 */
+    overflow-y: auto; /* 添加滚动条 */
+}
+
+/* 美化滚动条 */
+#notes-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+#notes-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+#notes-list::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 3px;
+}
+
+#notes-list::-webkit-scrollbar-thumb:hover {
+    background: #555;
 } 
