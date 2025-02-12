@@ -1017,11 +1017,26 @@ body {
     font-weight: 500;
 }
 
-/* 高亮样式 */
+/* 关键词高亮样式（保持黄色） */
 .keyword-highlight {
     background-color: #fff3cd;
     padding: 0 2px;
     border-radius: 2px;
+}
+
+/* 句子高亮样式（改为浅蓝色） */
+.highlight-text {
+    background-color: #e3f2fd;  /* 浅蓝色背景 */
+    cursor: pointer;
+    position: relative;
+    padding: 2px 4px;
+    border-radius: 2px;
+    transition: background-color 0.2s;
+    border-bottom: 2px solid #90caf9;  /* 添加蓝色下划线 */
+}
+
+.highlight-text:hover {
+    background-color: #bbdefb;  /* 鼠标悬停时加深蓝色 */
 }
 
 /* 编辑器行样式 */
@@ -1035,4 +1050,30 @@ body {
 
 .editor-line:empty::before {
     content: '\200B'; /* 零宽空格，确保空行有高度 */
+}
+
+/* 笔记列表样式 */
+.note-item {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 12px;
+}
+
+.note-content {
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 8px;
+}
+
+.note-source {
+    font-size: 12px;
+    color: #666;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.note-source .material-icons {
+    font-size: 14px;
 } 
